@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { OrdersService } from './orders.service.js';
+import { OrdersExportService } from './orders-export.service.js';
 import {
   createOrderSchema,
   updateOrderSchema,
@@ -9,11 +10,35 @@ import {
 
 export default async function ordersRoutes(fastify: FastifyInstance) {
   const service = new OrdersService(fastify.supabase);
+  const exportService = new OrdersExportService(fastify.supabase);
 
   fastify.get('/api/admin/orders', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const parsed = listOrdersQuerySchema.safeParse(request.query);
     if (!parsed.success) return reply.status(400).send({ message: 'Invalid query', errors: parsed.error.flatten() });
     return service.list(parsed.data);
+  });
+
+  // Export routes — MUST be before /:id to avoid path conflict
+  fastify.get('/api/admin/orders/export/excel', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const parsed = listOrdersQuerySchema.safeParse(request.query);
+    const filters = parsed.success ? parsed.data : {};
+    const buffer = await exportService.generateExcel(filters);
+    const date = new Date().toISOString().split('T')[0];
+    return reply
+      .header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+      .header('Content-Disposition', `attachment; filename="orders-export-${date}.xlsx"`)
+      .send(buffer);
+  });
+
+  fastify.get('/api/admin/orders/export/pdf', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const parsed = listOrdersQuerySchema.safeParse(request.query);
+    const filters = parsed.success ? parsed.data : {};
+    const buffer = await exportService.generatePdf(filters);
+    const date = new Date().toISOString().split('T')[0];
+    return reply
+      .header('Content-Type', 'application/pdf')
+      .header('Content-Disposition', `attachment; filename="orders-export-${date}.pdf"`)
+      .send(buffer);
   });
 
   fastify.get<{ Params: { id: string } }>('/api/admin/orders/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {

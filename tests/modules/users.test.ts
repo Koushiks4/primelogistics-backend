@@ -17,6 +17,7 @@ function buildApp(user: any) {
       },
       from: vi.fn().mockReturnValue({
         select: vi.fn().mockReturnValue({ order: vi.fn().mockResolvedValue({ data: [ADMIN_USER, STAFF_USER], error: null }) }),
+        insert: vi.fn().mockResolvedValue({ error: null }),
         update: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue({ select: vi.fn().mockReturnValue({ single: vi.fn().mockResolvedValue({ data: STAFF_USER, error: null }) }) }) }),
       }),
     } as any);

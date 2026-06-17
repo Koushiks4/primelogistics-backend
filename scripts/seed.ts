@@ -71,7 +71,7 @@ async function getAdminUserId(): Promise<string> {
   return data.id;
 }
 
-async function seedOrders(adminId: string) {
+async function seedOrders(adminId: string, clientIds: string[]) {
   console.log('Seeding orders...');
   const orders = [];
 
@@ -83,6 +83,7 @@ async function seedOrders(adminId: string) {
     const receiverName = randomName();
     const hasPartner = Math.random() > 0.3;
     const createdAt = randomDate(90);
+    const hasClient = Math.random() > 0.2;
 
     // Determine status — weight toward common flows
     let status: typeof STATUSES[number];
@@ -104,6 +105,7 @@ async function seedOrders(adminId: string) {
       partner_awb_number: hasPartner ? `${pick(PARTNERS).substring(0, 3).toUpperCase()}-${100000000 + Math.floor(Math.random() * 899999999)}` : null,
       shipment_type: isInternational ? 'international' : 'domestic',
       status,
+      client_id: hasClient ? pick(clientIds) : null,
       sender_name: senderName,
       sender_phone: randomPhone(),
       sender_email: randomEmail(senderName),
@@ -376,23 +378,67 @@ async function seedNotificationLogs(adminId: string) {
   console.log(`  Created ${logs.length} notification log entries`);
 }
 
+async function cleanup() {
+  console.log('Cleaning up existing data...');
+
+  // Delete in FK-safe order
+  const { count: notif } = await supabase.from('notification_logs').delete().neq('id', '00000000-0000-0000-0000-000000000000').select('*', { count: 'exact', head: true });
+  console.log(`  Deleted ${notif ?? 0} notification logs`);
+
+  const { count: items } = await supabase.from('invoice_items').delete().neq('id', '00000000-0000-0000-0000-000000000000').select('*', { count: 'exact', head: true });
+  console.log(`  Deleted ${items ?? 0} invoice items`);
+
+  const { count: inv } = await supabase.from('invoices').delete().neq('id', '00000000-0000-0000-0000-000000000000').select('*', { count: 'exact', head: true });
+  console.log(`  Deleted ${inv ?? 0} invoices`);
+
+  const { count: hist } = await supabase.from('order_status_history').delete().neq('id', '00000000-0000-0000-0000-000000000000').select('*', { count: 'exact', head: true });
+  console.log(`  Deleted ${hist ?? 0} order status history entries`);
+
+  const { count: ord } = await supabase.from('orders').delete().neq('id', '00000000-0000-0000-0000-000000000000').select('*', { count: 'exact', head: true });
+  console.log(`  Deleted ${ord ?? 0} orders`);
+
+  const { count: leads } = await supabase.from('leads').delete().neq('id', '00000000-0000-0000-0000-000000000000').select('*', { count: 'exact', head: true });
+  console.log(`  Deleted ${leads ?? 0} leads`);
+
+  const { count: cli } = await supabase.from('clients').delete().neq('id', '00000000-0000-0000-0000-000000000000').select('*', { count: 'exact', head: true });
+  console.log(`  Deleted ${cli ?? 0} clients`);
+
+  // Reset AWB and invoice counters
+  await supabase.from('awb_counter').update({ current_number: 0 }).eq('id', 1);
+  await supabase.from('invoice_counter').update({ current_number: 0 }).eq('id', 1);
+  console.log('  Reset AWB and invoice counters');
+
+  console.log('  Cleanup complete!\n');
+}
+
 async function main() {
+  const args = process.argv.slice(2);
+  const cleanupOnly = args.includes('--cleanup');
+
   console.log('\nPrime Logistics — Database Seed Script\n');
 
   const adminId = await getAdminUserId();
   console.log(`Using admin user: ${adminId}\n`);
 
-  await seedOrders(adminId);
-  await seedLeads(adminId);
+  await cleanup();
+
+  if (cleanupOnly) {
+    console.log('Cleanup-only mode — skipping seed.\n');
+    return;
+  }
+
   const clients = await seedClients(adminId);
+  const clientIds = clients.map(c => c.id);
+  await seedOrders(adminId, clientIds);
+  await seedLeads(adminId);
   await seedInvoices(adminId, clients);
   await seedNotificationLogs(adminId);
 
   console.log('\nSeed complete!\n');
   console.log('Summary:');
-  console.log('  - 50 orders (with status history for each)');
-  console.log('  - 30 leads (across all 4 sources)');
   console.log('  - 15 clients');
+  console.log('  - 50 orders (with status history, ~80% linked to clients)');
+  console.log('  - 30 leads (across all 4 sources)');
   console.log('  - 20 invoices (linked to clients, with line items)');
   console.log('  - 15 notification log entries');
 }

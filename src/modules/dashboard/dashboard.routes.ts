@@ -5,6 +5,7 @@ import { DashboardService } from './dashboard.service.js';
 const dashboardQuerySchema = z.object({
   from_date: z.string().datetime().optional(),
   to_date: z.string().datetime().optional(),
+  client_id: z.string().uuid().optional(),
 });
 
 export default async function dashboardRoutes(fastify: FastifyInstance) {
