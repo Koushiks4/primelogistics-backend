@@ -9,6 +9,7 @@ const invoiceItemSchema = z.object({
 });
 
 export const createInvoiceSchema = z.object({
+  client_id: z.string().uuid().optional(),
   client_name: z.string().min(1),
   client_email: z.string().email().optional(),
   client_phone: z.string().optional(),
