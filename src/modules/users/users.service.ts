@@ -17,6 +17,16 @@ export class UsersService {
       user_metadata: { full_name: fullName, role },
     });
     if (authError) throw new Error(authError.message);
+
+    // Create profile explicitly (no trigger dependency)
+    const { error: profileError } = await this.supabase.from('profiles').insert({
+      id: authData.user.id,
+      email,
+      full_name: fullName,
+      role,
+    });
+    if (profileError) throw new Error(profileError.message);
+
     return { id: authData.user.id, email, full_name: fullName, role };
   }
 

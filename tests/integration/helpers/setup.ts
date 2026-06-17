@@ -16,6 +16,7 @@ export interface TestContext {
     orders: string[];
     leads: string[];
     invoices: string[];
+    clients: string[];
   };
   testRunStartTime: string;
 }
@@ -73,7 +74,7 @@ export async function setupTestContext(): Promise<TestContext> {
     staffToken: staffData.access_token,
     adminUser: adminData.user,
     staffUser: staffData.user,
-    createdIds: { orders: [], leads: [], invoices: [] },
+    createdIds: { orders: [], leads: [], invoices: [], clients: [] },
     testRunStartTime: new Date().toISOString(),
   };
 }
@@ -85,6 +86,10 @@ export async function teardownTestContext(ctx: TestContext | undefined) {
   if (ctx.createdIds.orders.length) {
     await supabase.from('order_status_history').delete().in('order_id', ctx.createdIds.orders);
     await supabase.from('orders').delete().in('id', ctx.createdIds.orders);
+  }
+
+  if (ctx.createdIds.clients.length) {
+    await supabase.from('clients').delete().in('id', ctx.createdIds.clients);
   }
 
   if (ctx.createdIds.invoices.length) {

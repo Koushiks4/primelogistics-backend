@@ -239,4 +239,93 @@ describe('Orders Integration Tests', () => {
 
     expect(getRes.statusCode).toBe(404);
   });
+
+  it('should create order with client_id', async () => {
+    const clientRes = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/admin/clients',
+      headers: authHeaders(ctx.adminToken),
+      payload: { name: 'Order Client Test' },
+    });
+    const client = clientRes.json();
+    ctx.createdIds.clients.push(client.id);
+
+    const res = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/admin/orders',
+      headers: authHeaders(ctx.adminToken),
+      payload: { ...VALID_ORDER, client_id: client.id },
+    });
+
+    expect(res.statusCode).toBe(201);
+    const body = res.json();
+    expect(body.client_id).toBe(client.id);
+    ctx.createdIds.orders.push(body.id);
+  });
+
+  it('should filter orders by client_id', async () => {
+    const clientRes = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/admin/clients',
+      headers: authHeaders(ctx.adminToken),
+      payload: { name: 'Filter Client Test' },
+    });
+    const client = clientRes.json();
+    ctx.createdIds.clients.push(client.id);
+
+    const orderRes = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/admin/orders',
+      headers: authHeaders(ctx.adminToken),
+      payload: { ...VALID_ORDER, client_id: client.id },
+    });
+    ctx.createdIds.orders.push(orderRes.json().id);
+
+    const res = await ctx.app.inject({
+      method: 'GET',
+      url: `/api/admin/orders?client_id=${client.id}`,
+      headers: authHeaders(ctx.adminToken),
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    body.data.forEach((order: any) => {
+      expect(order.client_id).toBe(client.id);
+    });
+  });
+
+  it('should export orders as Excel', async () => {
+    const res = await ctx.app.inject({
+      method: 'GET',
+      url: '/api/admin/orders/export/excel',
+      headers: authHeaders(ctx.adminToken),
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    expect(res.headers['content-disposition']).toMatch(/attachment; filename="orders-export-.*\.xlsx"/);
+  });
+
+  it('should export orders as PDF', async () => {
+    const res = await ctx.app.inject({
+      method: 'GET',
+      url: '/api/admin/orders/export/pdf',
+      headers: authHeaders(ctx.adminToken),
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toBe('application/pdf');
+    expect(res.headers['content-disposition']).toMatch(/attachment; filename="orders-export-.*\.pdf"/);
+  });
+
+  it('should export filtered orders as Excel', async () => {
+    const res = await ctx.app.inject({
+      method: 'GET',
+      url: '/api/admin/orders/export/excel?status=booked',
+      headers: authHeaders(ctx.adminToken),
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  });
 });

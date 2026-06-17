@@ -6,7 +6,7 @@ export class OrdersService {
   constructor(private supabase: SupabaseClient) {}
 
   async list(query: ListOrdersQuery) {
-    const { page, limit, status, shipment_type, search, from_date, to_date } = query;
+    const { page, limit, status, shipment_type, search, from_date, to_date, client_id } = query;
     const offset = (page - 1) * limit;
 
     let q = this.supabase
@@ -18,6 +18,7 @@ export class OrdersService {
 
     if (status) q = q.eq('status', status);
     if (shipment_type) q = q.eq('shipment_type', shipment_type);
+    if (client_id) q = q.eq('client_id', client_id);
     if (from_date) q = q.gte('created_at', from_date);
     if (to_date) q = q.lte('created_at', to_date);
     if (search) {

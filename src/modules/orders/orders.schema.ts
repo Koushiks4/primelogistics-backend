@@ -27,6 +27,7 @@ export const createOrderSchema = z.object({
     .optional(),
   description: z.string().optional(),
   special_instructions: z.string().optional(),
+  client_id: z.string().uuid().optional(),
 });
 
 export const updateOrderSchema = createOrderSchema.partial();
@@ -45,6 +46,7 @@ export const listOrdersQuerySchema = z.object({
   search: z.string().optional(),
   from_date: z.string().datetime().optional(),
   to_date: z.string().datetime().optional(),
+  client_id: z.string().uuid().optional(),
 });
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
