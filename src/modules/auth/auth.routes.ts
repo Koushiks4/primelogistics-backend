@@ -7,6 +7,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     if (!parsed.success) {
       return reply.status(400).send({ message: 'Invalid input', errors: parsed.error.flatten() });
     }
+    
 
     const { email, password } = parsed.data;
     const { data, error } = await fastify.supabase.auth.signInWithPassword({ email, password });
@@ -14,6 +15,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     if (error) {
       return reply.status(401).send({ message: 'Invalid email or password' });
     }
+    console.log(data.user)
 
     // Get profile for role info
     const { data: profile } = await fastify.supabase
@@ -21,6 +23,8 @@ export default async function authRoutes(fastify: FastifyInstance) {
       .select('id, email, full_name, role, is_active')
       .eq('id', data.user.id)
       .single();
+
+    console.log(profile)
 
     if (!profile?.is_active) {
       return reply.status(403).send({ message: 'Account is deactivated' });
