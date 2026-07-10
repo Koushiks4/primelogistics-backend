@@ -64,13 +64,53 @@ export class NotificationService {
     }
   }
 
-  async sendNewLeadNotification(lead: { id: string; name: string; source: string; email?: string; phone?: string }) {
+  async sendNewLeadNotification(lead: {
+    id: string; name: string; source: string; email?: string; phone?: string;
+    message?: string; origin_city?: string; destination_city?: string; shipment_type?: string;
+    approximate_weight?: string; city?: string; investment_budget?: string; business_experience?: string;
+  }) {
     const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL;
     if (!adminEmail) return;
+
+    const sourceLabels: Record<string, string> = {
+      contact_us: 'Contact Us',
+      shipment_enquiry: 'Shipment Enquiry',
+      franchise_request: 'Franchise Request',
+    };
+    const sourceLabel = sourceLabels[lead.source] || lead.source;
+
+    // Build the email body from every field that was actually submitted, so the
+    // notification email contains the full form contents (not just name/email/phone).
+    const fields: Array<[string, string | undefined]> = [
+      ['Name', lead.name],
+      ['Email', lead.email],
+      ['Phone', lead.phone],
+      ['Origin City', lead.origin_city],
+      ['Destination City', lead.destination_city],
+      ['Shipment Type', lead.shipment_type],
+      ['Approx. Weight', lead.approximate_weight],
+      ['City', lead.city],
+      ['Investment Budget', lead.investment_budget],
+      ['Business Experience', lead.business_experience],
+      ['Message', lead.message],
+    ];
+    const lines = fields
+      .filter(([, value]) => value !== undefined && value !== null && value !== '')
+      .map(([label, value]) => `${label}: ${value}`);
+
+    const content = [
+      `A new ${sourceLabel} form has been submitted.`,
+      ``,
+      `Form: ${sourceLabel}`,
+      ...lines,
+      ``,
+      `Prime Logistic Services`,
+    ].join('\n');
+
     await this.send({
       type: 'email', recipient: adminEmail,
-      subject: `New Lead: ${lead.name} (${lead.source})`,
-      content: `A new lead has been submitted.\n\nName: ${lead.name}\nSource: ${lead.source}\nEmail: ${lead.email || 'N/A'}\nPhone: ${lead.phone || 'N/A'}`,
+      subject: `New ${sourceLabel}: ${lead.name}`,
+      content,
       relatedType: 'lead', relatedId: lead.id,
     });
   }

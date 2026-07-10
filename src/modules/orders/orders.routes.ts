@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { OrdersService } from './orders.service.js';
 import { OrdersExportService } from './orders-export.service.js';
+import { OrdersLabelsService } from './orders-labels.service.js';
 import {
   createOrderSchema,
   updateOrderSchema,
@@ -11,6 +12,7 @@ import {
 export default async function ordersRoutes(fastify: FastifyInstance) {
   const service = new OrdersService(fastify.supabase);
   const exportService = new OrdersExportService(fastify.supabase);
+  const labelsService = new OrdersLabelsService(fastify.supabase);
 
   fastify.get('/api/admin/orders', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const parsed = listOrdersQuerySchema.safeParse(request.query);
@@ -39,6 +41,19 @@ export default async function ordersRoutes(fastify: FastifyInstance) {
       .header('Content-Type', 'application/pdf')
       .header('Content-Disposition', `attachment; filename="orders-export-${date}.pdf"`)
       .send(buffer);
+  });
+
+  fastify.get<{ Params: { id: string }; Querystring: { boxes?: string } }>('/api/admin/orders/:id/labels', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const boxes = Math.min(Math.max(parseInt(request.query.boxes ?? '1', 10) || 1, 1), 500);
+    try {
+      const { buffer, awb } = await labelsService.generateLabels(request.params.id, boxes);
+      return reply
+        .header('Content-Type', 'application/pdf')
+        .header('Content-Disposition', `attachment; filename="labels-${awb}.pdf"`)
+        .send(buffer);
+    } catch {
+      return reply.status(404).send({ message: 'Order not found' });
+    }
   });
 
   fastify.get<{ Params: { id: string } }>('/api/admin/orders/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {

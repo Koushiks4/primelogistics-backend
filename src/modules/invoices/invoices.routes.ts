@@ -66,7 +66,9 @@ export default async function invoicesRoutes(fastify: FastifyInstance) {
       const RIGHT = 545;
       const WIDTH = RIGHT - LEFT;
 
-      const fmt = (n: number) => `₹${Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+      // Use "Rs." rather than the ₹ (U+20B9) symbol: pdfkit's built-in
+      // Helvetica has no rupee glyph and renders a stray "1"-like character.
+      const fmt = (n: number) => `Rs. ${Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 
       // --- Header with logo and INVOICE title ---
       try {
