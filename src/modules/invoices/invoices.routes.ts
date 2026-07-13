@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { InvoicesService } from './invoices.service.js';
 import { createInvoiceSchema, updateInvoiceSchema, addItemSchema, listInvoicesQuerySchema } from './invoices.schema.js';
+import { logoBuffer } from '../../assets/logo.js';
 
 export default async function invoicesRoutes(fastify: FastifyInstance) {
   const service = new InvoicesService(fastify.supabase);
@@ -48,11 +49,6 @@ export default async function invoicesRoutes(fastify: FastifyInstance) {
     try {
       const invoice = await service.getById(request.params.id);
       const PDFDocument = (await import('pdfkit')).default;
-      const path = await import('path');
-      const { fileURLToPath } = await import('url');
-
-      const __dirname = path.dirname(fileURLToPath(import.meta.url));
-      const logoPath = path.resolve(__dirname, '../../assets/logo.png');
 
       const doc = new PDFDocument({ size: 'A4', margin: 50 });
       const chunks: Buffer[] = [];
@@ -72,7 +68,7 @@ export default async function invoicesRoutes(fastify: FastifyInstance) {
 
       // --- Header with logo and INVOICE title ---
       try {
-        doc.image(logoPath, LEFT, 40, { width: 150 });
+        doc.image(logoBuffer, LEFT, 40, { width: 150 });
       } catch {
         doc.fontSize(18).fillColor(RED).text('PRIME', LEFT, 45, { continued: true }).fillColor(DARK).text(' LOGISTIC SERVICES');
       }

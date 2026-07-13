@@ -1,4 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js';
+import { logoBuffer } from '../../assets/logo.js';
 
 interface LabelOrder {
   awb_number: string;
@@ -41,11 +42,6 @@ export class OrdersLabelsService {
     const order = await this.getOrder(id);
 
     const PDFDocument = (await import('pdfkit')).default;
-    const path = await import('path');
-    const { fileURLToPath } = await import('url');
-
-    const __dirname = path.dirname(fileURLToPath(import.meta.url));
-    const logoPath = path.resolve(__dirname, '../../assets/logo.png');
 
     const RED = '#E31E24';
     const DARK = '#1a1a1a';
@@ -67,9 +63,9 @@ export class OrdersLabelsService {
       // --- Header band ---
       doc.rect(0, 0, W, 58).fill(RED);
       try {
-        doc.image(logoPath, 14, 11, { width: 36, height: 36 });
+        doc.image(logoBuffer, 14, 11, { width: 36, height: 36 });
       } catch {
-        // logo optional — ignore if asset is missing
+        // logo optional — ignore if embedding fails
       }
       doc
         .fillColor('#ffffff')
